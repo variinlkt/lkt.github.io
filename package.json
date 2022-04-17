@@ -29,7 +29,7 @@
     "hexo-server": "^2.0.0",
     "hexo-wordcount": "^6.0.1",
     "highlight.js": "^10.4.1",
-    "leancloud-storage": "^4.10.1"
+    "leancloud-storage": "^4.12.2"
   },
   "devDependencies": {
     "hexo-deployer-git": "^3.0.0"
