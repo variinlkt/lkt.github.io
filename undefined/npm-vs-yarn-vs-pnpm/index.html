@@ -402,11 +402,11 @@
             <!-- WordCount start -->
             <div class="blank_box"></div>
             <span class="meta">
-              Estimated Reading Time <span class="post-count">1</span> Minutes
+              Estimated Reading Time <span class="post-count">9</span> Minutes
             </span>
             <div class="blank_box"></div>
             <span class="meta">
-              Words <span class="post-count">5</span> In Total
+              Words <span class="post-count">1.5k</span> In Total
             </span>
             <div class="blank_box"></div>
             <!-- WordCount end -->
@@ -468,12 +468,113 @@
       <!-- Post Container -->
       <div class="col-lg-8 col-lg-offset-1 col-md-10 col-md-offset-1 post-container">
 
-        <h1>Difference between npm\yarn\pnpm</h1>
+        <p>For Frontend developer, <code>npm</code> and <code>yarn</code> is two of the most widely used package managers. In the past several years, a new package manager called <code>pnpm</code> appears and significantly improves the speed of package installation. How <code>pnpm</code> dramatically speeds up the installation? Why <code>npm</code> and <code>yarn</code> have limitations? What’s the differece between <code>npm</code>, <code>yarn</code> and <code>pnpm</code>? You can get your answer after reading this article.</p>
+<h2 id="What-will-happen-when-executed-npm-yarn-install">What will happen when executed <code>npm/yarn install</code></h2>
+<ul>
+<li>After executing the command, a dependency tree will be built.</li>
+<li>packages will be resolved into a specific version according to the <code>package.json</code> file</li>
+<li>download the tarball of the dependency to the local offline image。</li>
+<li>Unzip the dependency from the offline image to the local cache</li>
+<li>Copy the dependency from cache to <code>node_modules</code> directory</li>
+</ul>
+<p>What will the dependency tree be like after the installation?</p>
+<h3 id="npm-version-3"><code>npm</code> version &lt;3</h3>
+<p>the dependency tree would be a nested structure. e.g.</p>
+<figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">node_modules</span><br><span class="line">└─ foo</span><br><span class="line">   ├─ index.<span class="keyword">js</span></span><br><span class="line"><span class="keyword"> </span>  ├─ package.<span class="keyword">json</span></span><br><span class="line"><span class="keyword"> </span>  └─ node_modules</span><br><span class="line">      └─ <span class="keyword">bar</span></span><br><span class="line"><span class="keyword"> </span>        ├─ index.<span class="keyword">js</span></span><br><span class="line"><span class="keyword"> </span>        └─ package.<span class="keyword">json</span></span><br><span class="line"><span class="keyword"></span></span><br></pre></td></tr></table></figure>
+<p>Just imagine the pitfalls of the structure:</p>
+<ul>
+<li>
+<p>the dependency level will be too deep and will cause excessively long file paths, especially on window systems.</p>
+</li>
+<li>
+<p>lots of duplicate packages are installed, which leads to a large file size.</p>
+<p>For example, if <code>baz</code> and <code>foo</code> are in the same directory, and both of them depend on the same version of lodash, then lodash will be installed in both node_modules, i.e. duplicate installations.</p>
+</li>
+<li>
+<p>Module instances cannot be shared.</p>
+<p>For example, <code>React</code> has some internal variables. It is not possible to import the same <code>React</code> instance in two different packages, so the internal variables cannot be shared, which may leads to some unpredictable bugs.</p>
+</li>
+</ul>
+<h3 id="npm-version-3-0-0"><code>npm</code> version &gt;=3.0.0</h3>
+<p>After npm version &gt;=3.0.0, npm uses a flat structure. e.g.</p>
+<figure class="highlight pgsql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">node_modules</span><br><span class="line">├─ foo</span><br><span class="line">|  ├─ <span class="keyword">index</span>.js</span><br><span class="line">|  └─ package.json</span><br><span class="line">└─ bar</span><br><span class="line">   ├─ <span class="keyword">index</span>.js</span><br><span class="line">   └─ package.json</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>Compared to the previous nested structure, all dependencies are slapped into the <code>node_modules</code> directory, which avoids the endless, deep nested directory structure. When installing a new package, it will searching in the upper level <code>node_modules</code>, according to the <code>node require</code> mechanism. Once it finds the same version of the package, it will not be reinstalled, solving the problem of repeated installation of a large number of packages, and the dependency hierarchy is not too deep.</p>
+<h3 id="Disadvantages-of-the-flat-structure">Disadvantages of the flat structure</h3>
+<p>However, the flat structure is not invulnerable. Problems below still exist:</p>
+<ul>
+<li>Dependencies structure is uncertain. e.g.</li>
+</ul>
+<p>if <code>foo</code> depends <code>base64-js@1.0.1</code> while <code>bar</code> depends <code>base64-js@1.0.2</code>, when <code>npm install</code>, the installation structure might be like this:</p>
+<figure class="highlight angelscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">node_modules</span><br><span class="line">├─ foo</span><br><span class="line">├─ bar</span><br><span class="line">   └─ base64-<span class="symbol">js@</span><span class="number">1.0</span><span class="number">.2</span></span><br><span class="line">└─ base64-<span class="symbol">js@</span><span class="number">1.0</span><span class="number">.1</span></span><br></pre></td></tr></table></figure>
+<p>or like this:</p>
+<figure class="highlight angelscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">node_modules</span><br><span class="line">├─ foo</span><br><span class="line">   └─ base64-<span class="symbol">js@</span><span class="number">1.0</span><span class="number">.1</span></span><br><span class="line">├─ bar</span><br><span class="line">└─ base64-<span class="symbol">js@</span><span class="number">1.0</span><span class="number">.2</span></span><br></pre></td></tr></table></figure>
+<p>the installation structure depends on <code>foo</code> and <code>bar</code>’s order in <code>package.json</code>. If <code>foo</code> is declared before, then it would be the preceding structure, otherwise would be the following one.<br>
+This is the reason why <code>package-lock.json</code> file borns.</p>
+<ul>
+<li>The flattening algorithm itself is highly complex and time-consuming.</li>
+<li>The project can still illegally access packages that have no declared dependencies.</li>
+</ul>
+<h2 id="How-pnpm-install">How <code>pnpm install</code></h2>
+<p>Take installing <code>express</code> as an example:</p>
+<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">pnpm init -y</span><br><span class="line">pnpm <span class="keyword">install</span> express</span><br></pre></td></tr></table></figure>
+<p>and <code>node_modules</code> folder structure would be like:</p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">.pnpm</span><br><span class="line"><span class="selector-class">.modules</span>.yaml</span><br><span class="line">express</span><br><span class="line">mime-types</span><br></pre></td></tr></table></figure>
+<p>We can see <code>express</code>’s <code>Symbolic link</code> here, where there is no <code>node_modules</code> directory in it So where is <code>express</code>’s location?</p>
+<p>The answer is <code>.pnpm/express@4.17.1/node_modules/express</code></p>
+<p>The other packages seem to follow the same pattern of <code>&lt;package-name&gt;@version/node_modules/&lt;package-name&gt;</code>.</p>
+<figure class="highlight smali"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">▾ node_modules</span><br><span class="line">  ▾ .pnpm</span><br><span class="line">    ▸ accepts@1.3.7</span><br><span class="line">    ▸ array-flatten@1.1.1</span><br><span class="line"><span class="keyword">    .</span>..</span><br><span class="line">    ▾ express@4.17.1</span><br><span class="line">      ▾ node_modules</span><br><span class="line">        ▸ accepts  -&gt; ../accepts@1.3.7/node_modules/accepts</span><br><span class="line">        ▸<span class="built_in"> array-flatten </span>-&gt; ../array-flatten@1.1.1/node_modules/array-flatten</span><br><span class="line"><span class="keyword">        .</span>..</span><br><span class="line">        ▾ express</span><br><span class="line">          ▸ lib</span><br><span class="line">            History.md</span><br><span class="line">            index.js</span><br><span class="line">            LICENSE</span><br><span class="line">            package.json</span><br><span class="line">            Readme.md</span><br></pre></td></tr></table></figure>
+<p><code>pnpm</code> is well designed to put the package itself and it’s dependencies under the same <code>node_module</code>, which is fully compatible with native <code>Node</code>, and keeps the packages and dependencies well organized.</p>
+<p>Instead of a dazzling array of dependencies under <code>node_modules</code> directory, the dependencies are now largely consistent with those declared in <code>package.json</code>. Even though <code>pnpm</code> will internally have some packages that will set up dependency lifting and will be lifted into the root <code>node_modules</code>, overall the root <code>node_modules</code> are much clearer and more standardized than before.</p>
+<p>Besides, <code>pnpm</code>’s approach to dependency management also cleverly circumvents the problem of illegal access to dependencies, i.e. as long as a package does not declare a dependency in <code>package.json</code>, it won’t be accessible in the project.</p>
+<h3 id="Illegal-access-of-npm-yarn-install">Illegal access of <code>npm/yarn install</code></h3>
+<p>What is the illegal access of <code>npm/yarn install</code> ? Let’s take an example.</p>
+<p>If package <code>A</code> depends on <code>B</code> while <code>B</code> depends on <code>C</code>, then even if <code>A</code> does not declare the dependency of <code>C</code>, due to the existence of dependency lifting, <code>C</code> is installed into the <code>node_modules</code> of <code>A</code>. Then I can directly use <code>C</code> in <code>A</code> and it can be run without problem, and it can be run normally after going live.</p>
+<p>Think about the pitfalls of this:</p>
+<ul>
+<li>
+<p>First, the version of <code>B</code> may change at any time.</p>
+<p>If the previous dependency is <code>C@1.0.1</code>, and now a new version of <code>B</code> releases with a dependence of <code>C@2.0.1</code>. After executing <code>npm/yarn install</code> in <code>A</code>, <code>C@2.0.1</code> would be installed, <strong>and <code>A</code> is still using the old API of <code>C</code>, it may report an error directly</strong>.</p>
+</li>
+<li>
+<p>Second, if <code>B</code> doesn’t depend on <code>C</code> after the update, then when installing dependencies, <code>C</code> won’t be installed in <code>node_modules</code>, and <code>A</code> will also report an error when referencing <code>C</code>’s code.</p>
+</li>
+<li>
+<p>Third, in a <code>monorepo</code> project, if <code>A</code> depends on <code>X</code>, <code>B</code> depends on <code>X</code>, and there is a <code>C</code> that does not depend on <code>X</code> but uses <code>X</code> in its code, <code>npm/yarn</code> will put <code>X</code> in <code>node_modules</code> in the root directory due to dependency lifting, so that <code>C</code> can run locally because it can be loaded according to node’s package loading mechanism. But imagine that if <code>C</code> is sent out as a separate package and users install it separately, <code>X</code> will not be found and the code that references <code>X</code> will report an error when it is executed.</p>
+</li>
+</ul>
+<p>These are all potential bugs of dependency promotion. If it’s a toolkit for many developers, it would be a serious hazard.</p>
+<p>Also, <code>npm</code> has tried to solve this problem by specifying the <code>--global-style</code> parameter to disable variable lifting, but this is equivalent to going back to the days of nested dependencies, and the disadvantages mentioned earlier will still be exposed.</p>
+<p><code>npm</code>/<code>yarn</code> find it hard to solve the dependency lifting problem, but the community still has a specific solution. For more details, please click <a target="_blank" rel="noopener" href="https://github.com/dependency-check-team/dependency-check">here</a></p>
+<p>However, <strong><code>pnpm</code> uses a unique dependency management approach that not only solves the security problem of dependency lifting, but also greatly optimizes performance in time and space</strong>.</p>
+<h2 id="Advantages-of-pnpm">Advantages of <code>pnpm</code></h2>
+<h3 id="Fast-speed">Fast speed</h3>
+<p>In most scenarios, <strong><code>pnpm</code> is significantly faster than <code>npm</code>/<code>yarn</code></strong>, even when comparing to using <code>yarn PnP mode</code></p>
+<h3 id="Efficient-use-of-disk-space">Efficient use of disk space</h3>
+<p><code>pnpm</code> internally uses a <strong>content-based addressing</strong> file system to store all files on disk:</p>
+<ul>
+<li>
+<p>It doesn’t install the same package over and over again.</p>
+<p>With <code>npm/yarn</code>, if 100 projects all rely on <code>lodash</code>, then <code>lodash</code> is likely to be installed 100 times, and there are 100 places on disk where this code is written.</p>
+<p>However, when using <code>pnpm</code>, it will only be installed once, and only one place will be written to disk, and then it will be used again directly using <strong>hardlink</strong> .</p>
+</li>
+<li>
+<p>Even if installing a different version of the package, <strong><code>pnpm</code> will reuse the code of the previous version to a great extent</strong>. For example, if <code>lodash</code> has 100 files, and one more file is added after the update, the disk will not be rewritten with 101 files, but keep the hardlink of the original 100 files and only write the new file.</p>
+</li>
+</ul>
+<h3 id="Supporting-monorepo">Supporting <code>monorepo</code></h3>
+<p>Nowadays, frontend projects are becoming more and more complex, and more projects are using <code>monorepo</code>. With the help of <code>monorepo</code>, we can use a single git repository to manage multiple subprojects, and all subprojects are stored in the packages directory of the root directory.</p>
+<p>Another big difference between <code>pnpm</code> and <code>npm/yarn</code> is the support for <code>monorepo</code>, which is reflected in the functionality of each subcommand. For example, execute <code>pnpm add A -r</code> in the root directory, and all packages will be added to the <code>A</code>’s dependency, and <code>--filter</code> is also supported to filter the package.</p>
+<h3 id="High-security">High security</h3>
+<p>As mentioned above, previously, when using <code>npm/yarn</code>, due to the flat structure of <code>node_module</code>, if <code>A</code> depends on <code>B</code> and <code>B</code> depends on <code>C</code>, then <code>A</code> can use <code>C</code> directly, but the problem is that <code>A</code> does not declare <code>C</code> as a dependency. Therefore, this kind of illegal access will happen. However <code>pnpm</code> creates a dependency management method to solve this problem and ensure security.</p>
 
 
         <hr>
         <!-- Pager -->
         <ul class="pager">
+          
+          <li class="previous">
+            <a href="/undefined/hard-link-vs-symbolic-link/" data-toggle="tooltip" data-placement="top" title="hard link vs symbolic link">&larr; Previous Post</a>
+          </li>
           
           
         </ul>
@@ -610,7 +711,7 @@
         <div id="toc" class="toc-article">
         <strong class="toc-title">Contents</strong>
         
-          <ol class="toc-nav"><li class="toc-nav-item toc-nav-level-1"><a class="toc-nav-link"><span class="toc-nav-number">1.</span> <span class="toc-nav-text">Difference between npm\yarn\pnpm</span></a></li></ol>
+          <ol class="toc-nav"><li class="toc-nav-item toc-nav-level-2"><a class="toc-nav-link" href="#What-will-happen-when-executed-npm-yarn-install"><span class="toc-nav-number">1.</span> <span class="toc-nav-text">What will happen when executed npm&#x2F;yarn install</span></a><ol class="toc-nav-child"><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#npm-version-3"><span class="toc-nav-number">1.1.</span> <span class="toc-nav-text">npm version &lt;3</span></a></li><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#npm-version-3-0-0"><span class="toc-nav-number">1.2.</span> <span class="toc-nav-text">npm version &gt;&#x3D;3.0.0</span></a></li><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#Disadvantages-of-the-flat-structure"><span class="toc-nav-number">1.3.</span> <span class="toc-nav-text">Disadvantages of the flat structure</span></a></li></ol></li><li class="toc-nav-item toc-nav-level-2"><a class="toc-nav-link" href="#How-pnpm-install"><span class="toc-nav-number">2.</span> <span class="toc-nav-text">How pnpm install</span></a><ol class="toc-nav-child"><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#Illegal-access-of-npm-yarn-install"><span class="toc-nav-number">2.1.</span> <span class="toc-nav-text">Illegal access of npm&#x2F;yarn install</span></a></li></ol></li><li class="toc-nav-item toc-nav-level-2"><a class="toc-nav-link" href="#Advantages-of-pnpm"><span class="toc-nav-number">3.</span> <span class="toc-nav-text">Advantages of pnpm</span></a><ol class="toc-nav-child"><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#Fast-speed"><span class="toc-nav-number">3.1.</span> <span class="toc-nav-text">Fast speed</span></a></li><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#Efficient-use-of-disk-space"><span class="toc-nav-number">3.2.</span> <span class="toc-nav-text">Efficient use of disk space</span></a></li><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#Supporting-monorepo"><span class="toc-nav-number">3.3.</span> <span class="toc-nav-text">Supporting monorepo</span></a></li><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#High-security"><span class="toc-nav-number">3.4.</span> <span class="toc-nav-text">High security</span></a></li></ol></li></ol>
         
         </div>
       </aside>
